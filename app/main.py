@@ -7,6 +7,7 @@ from app.config import obtener_entorno
 from app.models import EstadoEquipo, TipoEquipo
 from app.repository import EquipoRepository
 from app.service import (
+    EquipoNoAsignadoError,
     EquipoNoDisponibleError,
     EquipoNoEncontradoError,
     EquipoService,
@@ -113,3 +114,18 @@ def dar_de_baja_equipo(equipo_id: int, servicio: ServicioDep):
 @app.get("/salud")
 def salud():
     return {"estado": "ok", "entorno": obtener_entorno()}
+
+@app.post("/equipos/{equipo_id}/devolver", response_model=EquipoRespuesta)
+def devolver_equipo(equipo_id: int, servicio: ServicioDep):
+    try:
+        return servicio.devolver(equipo_id)
+    except EquipoNoEncontradoError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Equipo no encontrado",
+        )
+    except EquipoNoAsignadoError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="El equipo no está asignado",
+        )
