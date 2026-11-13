@@ -189,3 +189,18 @@ def test_salud_usa_desarrollo_por_defecto(client, monkeypatch):
     monkeypatch.delenv("APP_ENV", raising=False)
     respuesta = client.get("/salud")
     assert respuesta.json()["entorno"] == "desarrollo"
+
+def test_devolver_equipo_asignado_lo_deja_disponible(client):
+    client.post("/equipos", json=_equipo())
+    client.post("/equipos/1/asignar", json={"usuario": "Ana Torres"})
+    respuesta = client.post("/equipos/1/devolver")
+    assert respuesta.status_code == 200
+    cuerpo = respuesta.json()
+    assert cuerpo["estado"] == "disponible"
+    assert cuerpo["asignado_a"] is None
+
+
+def test_devolver_equipo_no_asignado_devuelve_409(client):
+    client.post("/equipos", json=_equipo())
+    respuesta = client.post("/equipos/1/devolver")
+    assert respuesta.status_code == 409

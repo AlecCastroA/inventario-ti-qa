@@ -14,6 +14,9 @@ class EquipoNoDisponibleError(Exception):
 class EquipoYaDeBajaError(Exception):
     """El equipo ya fue dado de baja."""
 
+class EquipoNoAsignadoError(Exception):
+    """El equipo no está asignado."""
+
 class EquipoService:
     """Reglas de negocio del inventario."""
 
@@ -58,5 +61,13 @@ class EquipoService:
         if equipo.estado == EstadoEquipo.BAJA:
             raise EquipoYaDeBajaError(equipo_id)
         equipo.estado = EstadoEquipo.BAJA
+        equipo.asignado_a = None
+        return self._repo.actualizar(equipo)
+
+    def devolver(self, equipo_id: int) -> Equipo:
+        equipo = self.obtener(equipo_id)
+        if equipo.estado != EstadoEquipo.ASIGNADO:
+            raise EquipoNoAsignadoError(equipo.estado.value)
+        equipo.estado = EstadoEquipo.DISPONIBLE
         equipo.asignado_a = None
         return self._repo.actualizar(equipo)
