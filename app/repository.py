@@ -25,7 +25,7 @@ class EquipoRepository:
 
     def obtener_por_serie(self, numero_serie: str) -> Equipo | None:
         for equipo in self._equipos.values():
-            if equipo.numero_serie.lower() == numero_serie.lower():
+            if equipo.numero_serie.casefold() == numero_serie.casefold():
                 return equipo
         return None
 

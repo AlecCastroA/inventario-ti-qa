@@ -36,3 +36,19 @@ def test_cn05_entorno_invalido_usa_desarrollo(client, monkeypatch):
     monkeypatch.setenv("APP_ENV", "otro")
     respuesta = client.get("/salud")
     assert respuesta.json()["entorno"] == "desarrollo"
+
+def test_cn06_serie_con_mayusculas_unicode_es_duplicada(client):
+    client.post("/equipos", json=_equipo(numero_serie="STRASSE-1"))
+    respuesta = client.post("/equipos", json=_equipo(numero_serie="straße-1"))
+    assert respuesta.status_code == 409
+
+
+def test_cn07_serie_solo_con_caracter_invisible_es_rechazada(client):
+    respuesta = client.post("/equipos", json=_equipo(numero_serie="\u200b"))
+    assert respuesta.status_code == 422
+
+
+def test_cn08_usuario_solo_con_caracter_invisible_es_rechazado(client):
+    client.post("/equipos", json=_equipo())
+    respuesta = client.post("/equipos/1/asignar", json={"usuario": "\u200b"})
+    assert respuesta.status_code == 422
