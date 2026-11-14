@@ -1,54 +1,42 @@
 # Inventario TI
 
-![CI](https://github.com/AlecCastroA/inventario-ti/actions/workflows/ci.yml/badge.svg)
+![CI](https://github.com/AlecCastroA/inventario-ti-qa/actions/workflows/ci.yml/badge.svg)
 
-API REST para controlar el inventario de equipos de TI de una oficina pequeña: registrar equipos, consultar su estado, asignarlos a usuarios y darlos de baja.
-
-> Proyecto individual del curso de Ingeniería de Software.
+API REST para controlar el inventario de equipos de TI de una oficina pequeña. Esta versión extiende el proyecto del PA1 con una estrategia de aseguramiento de calidad: pruebas automatizadas, cobertura en el pipeline, gestión de defectos y métricas.
 
 ## Funcionalidades
 
 - Registrar un equipo (tipo, marca/modelo, número de serie único).
-- Listar equipos y filtrar por tipo o estado.
+- Listar equipos y filtrar por tipo, estado o texto.
 - Consultar el detalle de un equipo por ID.
-- Asignar un equipo a un usuario.
-- Dar de baja un equipo.
-- Consultar el estado de la aplicación y el entorno activo.
+- Asignar, devolver y dar de baja un equipo.
+- Consultar el historial de movimientos de un equipo.
+- Consultar el estado de la API y el entorno activo.
 
 ## Endpoints
 
 | Método | Ruta | Descripción |
 |---|---|---|
 | POST | `/equipos` | Registra un equipo |
-| GET | `/equipos` | Lista equipos (filtros opcionales `tipo` y `estado`) |
+| GET | `/equipos` | Lista equipos (filtros opcionales `tipo`, `estado` y `q`) |
 | GET | `/equipos/{id}` | Detalle de un equipo |
 | POST | `/equipos/{id}/asignar` | Asigna el equipo a un usuario |
+| POST | `/equipos/{id}/devolver` | Devuelve un equipo asignado |
 | POST | `/equipos/{id}/baja` | Da de baja el equipo |
+| GET | `/equipos/{id}/historial` | Movimientos del equipo |
 | GET | `/salud` | Estado de la API y entorno activo |
 
 La documentación interactiva está en `/docs` cuando la API está en ejecución.
 
-## Reglas de negocio
-
-- El número de serie es único, sin distinguir mayúsculas de minúsculas.
-- Solo se puede asignar un equipo en estado `disponible`.
-- Un equipo asignado o disponible puede darse de baja; al darse de baja se libera al usuario.
-- Un equipo dado de baja no puede asignarse ni darse de baja otra vez.
-
 ## Tecnología
 
-Python 3.12, FastAPI, pytest, ruff y GitHub Actions. El almacenamiento es en memoria; SQLite queda como mejora futura.
-
-## Requisitos
-
-- Python 3.12 o superior
-- Git (en Windows, Git Bash)
+Python 3.12, FastAPI, pytest, pytest-cov, ruff y GitHub Actions. Los datos se guardan en memoria.
 
 ## Instalación
 
 ```bash
-git clone https://github.com/AlecCastroA/inventario-ti.git
-cd inventario-ti
+git clone https://github.com/AlecCastroA/inventario-ti-qa.git
+cd inventario-ti-qa
 python -m venv .venv
 source .venv/Scripts/activate   # Git Bash en Windows; en Linux/macOS: source .venv/bin/activate
 pip install -r requirements.txt
@@ -56,52 +44,48 @@ pip install -r requirements.txt
 
 ## Ejecución
 
-Con el script, que prepara el entorno virtual y las dependencias por ti:
-
 ```bash
 bash scripts/ejecutar.sh desarrollo    # con recarga automática
 bash scripts/ejecutar.sh produccion    # sin recarga
 ```
 
-O manualmente, con el entorno virtual activo:
+O manualmente, con el entorno virtual activo: `uvicorn app.main:app --reload`. La API queda en `http://127.0.0.1:8000`.
+
+## Pruebas y cobertura
 
 ```bash
-uvicorn app.main:app --reload
+pytest                                        # todas las pruebas
+pytest --cov=app --cov-report=term-missing    # con reporte de cobertura
+ruff check .                                  # lint
 ```
 
-La API queda en `http://127.0.0.1:8000`.
+El pipeline ejecuta estas verificaciones en cada push a `develop` o `main` y en cada Pull Request, exige una cobertura mínima de 80 % y bloquea el merge si algo falla.
 
-## Pruebas y verificación
+## Estrategia de calidad
 
-```bash
-pytest
-ruff check .
-```
-
-Estas mismas verificaciones se ejecutan automáticamente en GitHub Actions con cada push a `develop` o `main`.
+- `tests/test_equipos.py`: pruebas funcionales de cada endpoint.
+- `tests/test_caja_negra.py`: valores límite, particiones de equivalencia y adivinanza de errores.
+- `tests/test_caja_blanca.py`: pruebas del servicio que cubren decisiones y ramas.
+- Los defectos encontrados se registran en GitHub Issues con descripción, pasos para reproducirlos, severidad y estado.
 
 ## Estructura del proyecto
 
 ```
-app/          código de la API (rutas, servicio, repositorio, modelos, configuración)
-tests/        pruebas automáticas
-docs/         diagramas y documentación técnica
+app/          código de la API
+tests/        pruebas automatizadas
+docs/         diagramas y guías técnicas
 scripts/      script de ejecución por entorno
 .github/      workflow de integración continua
 ```
 
-## Documentación técnica
-
-- [Arquitectura y diagramas](docs/arquitectura.md)
-- [Entornos y despliegue](docs/despliegue.md)
+Más información en [arquitectura](docs/arquitectura.md) y [despliegue](docs/despliegue.md).
 
 ## Flujo de trabajo
 
-- Ramas: `main` (estable), `develop` (integración) y `feature/*` (funcionalidades). Todo cambio entra a `develop` mediante Pull Request.
+- Ramas: `main` (estable), `develop` (integración), `feature/*` y `test/*`. Todo cambio entra a `develop` mediante Pull Request con revisión.
 - Commits siguiendo [Conventional Commits](https://www.conventionalcommits.org/es/).
 
 ## Limitaciones conocidas
 
-- Los datos se guardan en memoria y se pierden al reiniciar la API.
-- No hay autenticación de usuarios.
-- No hay despliegue público ni contenerización con Docker.
+- Los datos se pierden al reiniciar la API.
+- No hay autenticación ni despliegue público.
