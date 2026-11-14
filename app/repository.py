@@ -1,10 +1,11 @@
-from app.models import Equipo, TipoEquipo
+from app.models import Equipo, EventoHistorial, TipoEquipo
 
 
 class EquipoRepository:
     def __init__(self) -> None:
         self._equipos: dict[int, Equipo] = {}
         self._siguiente_id = 1
+        self._historial: dict[int, list[EventoHistorial]] = {}
 
     def agregar(
         self, tipo: TipoEquipo, marca_modelo: str, numero_serie: str
@@ -34,3 +35,13 @@ class EquipoRepository:
     def actualizar(self, equipo: Equipo) -> Equipo:
         self._equipos[equipo.id] = equipo
         return equipo
+
+    def registrar_evento(
+        self, equipo_id: int, accion: str, usuario: str | None = None
+    ) -> None:
+        self._historial.setdefault(equipo_id, []).append(
+            EventoHistorial(accion, usuario)
+        )
+
+    def historial(self, equipo_id: int) -> list[EventoHistorial]:
+        return list(self._historial.get(equipo_id, []))

@@ -204,3 +204,17 @@ def test_devolver_equipo_no_asignado_devuelve_409(client):
     client.post("/equipos", json=_equipo())
     respuesta = client.post("/equipos/1/devolver")
     assert respuesta.status_code == 409
+
+def test_historial_registra_el_ciclo_de_un_equipo(client):
+    client.post("/equipos", json=_equipo())
+    client.post("/equipos/1/asignar", json={"usuario": "Ana Torres"})
+    client.post("/equipos/1/devolver")
+    respuesta = client.get("/equipos/1/historial")
+    assert respuesta.status_code == 200
+    acciones = [evento["accion"] for evento in respuesta.json()]
+    assert acciones == ["registro", "asignacion", "devolucion"]
+
+
+def test_historial_de_equipo_inexistente_devuelve_404(client):
+    respuesta = client.get("/equipos/999/historial")
+    assert respuesta.status_code == 404
