@@ -71,8 +71,9 @@ def listar_equipos(
     servicio: ServicioDep,
     tipo: TipoEquipo | None = None,
     estado: EstadoEquipo | None = None,
+    q: str | None = None,
 ):
-    return servicio.listar(tipo, estado)
+    return servicio.listar(tipo, estado, q)
 
 
 @app.get("/equipos/{equipo_id}", response_model=EquipoRespuesta)
@@ -136,9 +137,7 @@ def devolver_equipo(equipo_id: int, servicio: ServicioDep):
             detail="El equipo no está asignado",
         )
 
-@app.get(
-    "/equipos/{equipo_id}/historial", response_model=list[EventoRespuesta]
-)
+@app.get("/equipos/{equipo_id}/historial", response_model=list[EventoRespuesta])
 def historial_equipo(equipo_id: int, servicio: ServicioDep):
     try:
         return servicio.historial(equipo_id)
