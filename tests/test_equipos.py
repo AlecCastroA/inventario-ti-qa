@@ -218,3 +218,26 @@ def test_historial_registra_el_ciclo_de_un_equipo(client):
 def test_historial_de_equipo_inexistente_devuelve_404(client):
     respuesta = client.get("/equipos/999/historial")
     assert respuesta.status_code == 404
+
+def test_buscar_por_texto_en_marca_modelo(client):
+    client.post(
+        "/equipos",
+        json=_equipo(numero_serie="SN-001", marca_modelo="Lenovo ThinkPad"),
+    )
+    client.post(
+        "/equipos",
+        json=_equipo(numero_serie="SN-002", marca_modelo="HP LaserJet"),
+    )
+    respuesta = client.get("/equipos", params={"q": "lenovo"})
+    cuerpo = respuesta.json()
+    assert len(cuerpo) == 1
+    assert cuerpo[0]["numero_serie"] == "SN-001"
+
+
+def test_buscar_por_numero_de_serie_sin_distinguir_mayusculas(client):
+    client.post("/equipos", json=_equipo(numero_serie="SN-001"))
+    client.post("/equipos", json=_equipo(numero_serie="XY-777"))
+    respuesta = client.get("/equipos", params={"q": "xy-7"})
+    cuerpo = respuesta.json()
+    assert len(cuerpo) == 1
+    assert cuerpo[0]["numero_serie"] == "XY-777"

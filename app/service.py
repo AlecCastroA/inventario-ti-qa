@@ -36,12 +36,21 @@ class EquipoService:
         self,
         tipo: TipoEquipo | None = None,
         estado: EstadoEquipo | None = None,
+        q: str | None = None,
     ) -> list[Equipo]:
         equipos = self._repo.listar()
         if tipo is not None:
             equipos = [e for e in equipos if e.tipo == tipo]
         if estado is not None:
             equipos = [e for e in equipos if e.estado == estado]
+        if q:
+            texto = q.strip().lower()
+            equipos = [
+                e
+                for e in equipos
+                if texto in e.marca_modelo.lower()
+                or texto in e.numero_serie.lower()
+            ]
         return equipos
 
     def obtener(self, equipo_id: int) -> Equipo:
