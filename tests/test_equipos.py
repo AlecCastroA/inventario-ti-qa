@@ -189,3 +189,55 @@ def test_salud_usa_desarrollo_por_defecto(client, monkeypatch):
     monkeypatch.delenv("APP_ENV", raising=False)
     respuesta = client.get("/salud")
     assert respuesta.json()["entorno"] == "desarrollo"
+
+def test_devolver_equipo_asignado_lo_deja_disponible(client):
+    client.post("/equipos", json=_equipo())
+    client.post("/equipos/1/asignar", json={"usuario": "Ana Torres"})
+    respuesta = client.post("/equipos/1/devolver")
+    assert respuesta.status_code == 200
+    cuerpo = respuesta.json()
+    assert cuerpo["estado"] == "disponible"
+    assert cuerpo["asignado_a"] is None
+
+
+def test_devolver_equipo_no_asignado_devuelve_409(client):
+    client.post("/equipos", json=_equipo())
+    respuesta = client.post("/equipos/1/devolver")
+    assert respuesta.status_code == 409
+
+def test_historial_registra_el_ciclo_de_un_equipo(client):
+    client.post("/equipos", json=_equipo())
+    client.post("/equipos/1/asignar", json={"usuario": "Ana Torres"})
+    client.post("/equipos/1/devolver")
+    respuesta = client.get("/equipos/1/historial")
+    assert respuesta.status_code == 200
+    acciones = [evento["accion"] for evento in respuesta.json()]
+    assert acciones == ["registro", "asignacion", "devolucion"]
+
+
+def test_historial_de_equipo_inexistente_devuelve_404(client):
+    respuesta = client.get("/equipos/999/historial")
+    assert respuesta.status_code == 404
+
+def test_buscar_por_texto_en_marca_modelo(client):
+    client.post(
+        "/equipos",
+        json=_equipo(numero_serie="SN-001", marca_modelo="Lenovo ThinkPad"),
+    )
+    client.post(
+        "/equipos",
+        json=_equipo(numero_serie="SN-002", marca_modelo="HP LaserJet"),
+    )
+    respuesta = client.get("/equipos", params={"q": "lenovo"})
+    cuerpo = respuesta.json()
+    assert len(cuerpo) == 1
+    assert cuerpo[0]["numero_serie"] == "SN-001"
+
+
+def test_buscar_por_numero_de_serie_sin_distinguir_mayusculas(client):
+    client.post("/equipos", json=_equipo(numero_serie="SN-001"))
+    client.post("/equipos", json=_equipo(numero_serie="XY-777"))
+    respuesta = client.get("/equipos", params={"q": "xy-7"})
+    cuerpo = respuesta.json()
+    assert len(cuerpo) == 1
+    assert cuerpo[0]["numero_serie"] == "XY-777"

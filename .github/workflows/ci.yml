@@ -28,8 +28,8 @@ jobs:
       - name: Lint con ruff
         run: ruff check .
 
-      - name: Ejecutar pruebas con pytest
-        run: pytest -v
+      - name: Ejecutar pruebas con cobertura
+        run: pytest -v --cov=app --cov-report=term-missing --cov-fail-under=80
 
       - name: Validar sintaxis del script de ejecución
         run: bash -n scripts/ejecutar.sh
