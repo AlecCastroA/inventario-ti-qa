@@ -27,6 +27,7 @@ stateDiagram-v2
     [*] --> disponible: registrar
     disponible --> asignado: asignar a usuario
     disponible --> baja: dar de baja
+    asignado --> disponible: devolver
     asignado --> baja: dar de baja
     baja --> [*]
 ```
