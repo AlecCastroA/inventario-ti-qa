@@ -25,3 +25,8 @@ class Equipo:
     numero_serie: str
     estado: EstadoEquipo = EstadoEquipo.DISPONIBLE
     asignado_a: str | None = None
+
+@dataclass
+class EventoHistorial:
+    accion: str
+    usuario: str | None = None

@@ -47,6 +47,12 @@ class EquipoRespuesta(BaseModel):
     estado: EstadoEquipo
     asignado_a: str | None
 
+class EventoRespuesta(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    accion: str
+    usuario: str | None
+
 
 @app.post("/equipos", response_model=EquipoRespuesta, status_code=status.HTTP_201_CREATED,)
 def registrar_equipo(datos: EquipoCrear, servicio: ServicioDep):
@@ -128,4 +134,16 @@ def devolver_equipo(equipo_id: int, servicio: ServicioDep):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="El equipo no está asignado",
+        )
+
+@app.get(
+    "/equipos/{equipo_id}/historial", response_model=list[EventoRespuesta]
+)
+def historial_equipo(equipo_id: int, servicio: ServicioDep):
+    try:
+        return servicio.historial(equipo_id)
+    except EquipoNoEncontradoError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Equipo no encontrado",
         )
