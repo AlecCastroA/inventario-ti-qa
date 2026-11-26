@@ -23,6 +23,21 @@ class EquipoYaDeBajaError(Exception):
 class EquipoNoAsignadoError(Exception):
     """El equipo no está asignado."""
 
+def _coincide_tipo(equipo: Equipo, tipo: TipoEquipo | None) -> bool:
+    return tipo is None or equipo.tipo == tipo
+
+def _coincide_estado(equipo: Equipo, estado: EstadoEquipo | None) -> bool:
+    return estado is None or equipo.estado == estado
+
+def _coincide_texto(equipo: Equipo, q: str | None) -> bool:
+    if not q:
+        return True
+    texto = q.strip().lower()
+    return (
+        texto in equipo.marca_modelo.lower()
+        or texto in equipo.numero_serie.lower()
+    )
+
 class EquipoService:
     """Reglas de negocio del inventario."""
 
@@ -44,20 +59,13 @@ class EquipoService:
         estado: EstadoEquipo | None = None,
         q: str | None = None,
     ) -> list[Equipo]:
-        equipos = self._repo.listar()
-        if tipo is not None:
-            equipos = [e for e in equipos if e.tipo == tipo]
-        if estado is not None:
-            equipos = [e for e in equipos if e.estado == estado]
-        if q:
-            texto = q.strip().lower()
-            equipos = [
-                e
-                for e in equipos
-                if texto in e.marca_modelo.lower()
-                or texto in e.numero_serie.lower()
-            ]
-        return equipos
+        return [
+            equipo
+            for equipo in self._repo.listar()
+            if _coincide_tipo(equipo, tipo)
+            and _coincide_estado(equipo, estado)
+            and _coincide_texto(equipo, q)
+        ]
 
     def obtener(self, equipo_id: int) -> Equipo:
         equipo = self._repo.obtener(equipo_id)
