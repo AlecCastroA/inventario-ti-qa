@@ -241,3 +241,13 @@ def test_buscar_por_numero_de_serie_sin_distinguir_mayusculas(client):
     cuerpo = respuesta.json()
     assert len(cuerpo) == 1
     assert cuerpo[0]["numero_serie"] == "XY-777"
+
+def test_devolver_equipo_inexistente_devuelve_404(client):
+    respuesta = client.post("/equipos/999/devolver")
+    assert respuesta.status_code == 404
+
+
+def test_la_aplicacion_funciona_sin_sobrescribir_el_servicio():
+    cliente = TestClient(app)
+    respuesta = cliente.get("/equipos")
+    assert respuesta.status_code == 200
