@@ -1,4 +1,5 @@
 import unicodedata
+from functools import lru_cache
 from typing import Annotated, TypeAlias
 
 from fastapi import Depends, FastAPI, Request, status
@@ -19,11 +20,12 @@ from app.service import (
 
 app = FastAPI(title="Inventario TI", version="0.1.0")
 
-_repositorio = EquipoRepository()
-
+@lru_cache(maxsize=1)
+def obtener_repositorio() -> EquipoRepository:
+    return EquipoRepository()
 
 def get_service() -> EquipoService:
-    return EquipoService(_repositorio)
+    return EquipoService(obtener_repositorio())
 
 ServicioDep: TypeAlias = Annotated[EquipoService, Depends(get_service)]
 
