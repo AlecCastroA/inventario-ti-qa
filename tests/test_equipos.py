@@ -251,3 +251,13 @@ def test_la_aplicacion_funciona_sin_sobrescribir_el_servicio():
     cliente = TestClient(app)
     respuesta = cliente.get("/equipos")
     assert respuesta.status_code == 200
+
+def test_el_repositorio_real_se_comparte_entre_peticiones():
+    cliente = TestClient(app)
+    serie = "SN-COMPARTIDO-001"
+    cliente.post(
+        "/equipos",
+        json={"tipo": "laptop", "marca_modelo": "Prueba", "numero_serie": serie},
+    )
+    respuesta = cliente.get("/equipos", params={"q": serie})
+    assert len(respuesta.json()) == 1
