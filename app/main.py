@@ -5,7 +5,7 @@ from fastapi import Depends, FastAPI, HTTPException, status
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.config import obtener_entorno
-from app.models import EstadoEquipo, TipoEquipo
+from app.models import AccionHistorial, EstadoEquipo, TipoEquipo
 from app.repository import EquipoRepository
 from app.service import (
     EquipoNoAsignadoError,
@@ -67,7 +67,7 @@ class EquipoRespuesta(BaseModel):
 class EventoRespuesta(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    accion: str
+    accion: AccionHistorial
     usuario: str | None
 
 

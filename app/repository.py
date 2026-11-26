@@ -1,4 +1,4 @@
-from app.models import Equipo, EventoHistorial, TipoEquipo
+from app.models import AccionHistorial, Equipo, EventoHistorial, TipoEquipo
 
 
 class EquipoRepository:
@@ -37,7 +37,7 @@ class EquipoRepository:
         return equipo
 
     def registrar_evento(
-        self, equipo_id: int, accion: str, usuario: str | None = None
+        self, equipo_id: int, accion: AccionHistorial, usuario: str | None = None
     ) -> None:
         self._historial.setdefault(equipo_id, []).append(
             EventoHistorial(accion, usuario)
