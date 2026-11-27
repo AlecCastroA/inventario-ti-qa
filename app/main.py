@@ -1,11 +1,13 @@
 import unicodedata
+from functools import lru_cache
 from typing import Annotated, TypeAlias
 
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI, Request, status
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.config import obtener_entorno
-from app.models import EstadoEquipo, TipoEquipo
+from app.models import AccionHistorial, EstadoEquipo, TipoEquipo
 from app.repository import EquipoRepository
 from app.service import (
     EquipoNoAsignadoError,
@@ -18,13 +20,44 @@ from app.service import (
 
 app = FastAPI(title="Inventario TI", version="0.1.0")
 
-_repositorio = EquipoRepository()
-
+@lru_cache(maxsize=1)
+def obtener_repositorio() -> EquipoRepository:
+    return EquipoRepository()
 
 def get_service() -> EquipoService:
-    return EquipoService(_repositorio)
+    return EquipoService(obtener_repositorio())
 
 ServicioDep: TypeAlias = Annotated[EquipoService, Depends(get_service)]
+
+_ERRORES_HTTP = {
+    SerieDuplicadaError: (
+        status.HTTP_409_CONFLICT,
+        "Ya existe un equipo con ese número de serie",
+    ),
+    EquipoNoEncontradoError: (
+        status.HTTP_404_NOT_FOUND,
+        "Equipo no encontrado",
+    ),
+    EquipoNoDisponibleError: (
+        status.HTTP_409_CONFLICT,
+        "El equipo no está disponible para asignación",
+    ),
+    EquipoYaDeBajaError: (
+        status.HTTP_409_CONFLICT,
+        "El equipo ya fue dado de baja",
+    ),
+    EquipoNoAsignadoError: (
+        status.HTTP_409_CONFLICT,
+        "El equipo no está asignado",
+    ),
+}
+
+async def _responder_error_de_negocio(request: Request, exc: Exception):
+    codigo, detalle = _ERRORES_HTTP[type(exc)]
+    return JSONResponse(status_code=codigo, content={"detail": detalle})
+
+for _tipo_error in _ERRORES_HTTP:
+    app.add_exception_handler(_tipo_error, _responder_error_de_negocio)
 
 def _sin_invisibles(valor: str) -> str:
     limpio = "".join(c for c in valor if unicodedata.category(c) != "Cf").strip()
@@ -67,21 +100,13 @@ class EquipoRespuesta(BaseModel):
 class EventoRespuesta(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    accion: str
+    accion: AccionHistorial
     usuario: str | None
 
 
-@app.post("/equipos", response_model=EquipoRespuesta, status_code=status.HTTP_201_CREATED,)
+@app.post("/equipos",response_model=EquipoRespuesta,status_code=status.HTTP_201_CREATED,)
 def registrar_equipo(datos: EquipoCrear, servicio: ServicioDep):
-    try:
-        return servicio.registrar(
-            datos.tipo, datos.marca_modelo, datos.numero_serie
-        )
-    except SerieDuplicadaError:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Ya existe un equipo con ese número de serie",
-        )
+    return servicio.registrar(datos.tipo, datos.marca_modelo, datos.numero_serie)
 
 @app.get("/equipos", response_model=list[EquipoRespuesta])
 def listar_equipos(
@@ -95,45 +120,15 @@ def listar_equipos(
 
 @app.get("/equipos/{equipo_id}", response_model=EquipoRespuesta)
 def obtener_equipo(equipo_id: int, servicio: ServicioDep):
-    try:
-        return servicio.obtener(equipo_id)
-    except EquipoNoEncontradoError:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Equipo no encontrado",
-        )
+    return servicio.obtener(equipo_id)
 
 @app.post("/equipos/{equipo_id}/asignar", response_model=EquipoRespuesta)
-def asignar_equipo(
-    equipo_id: int, datos: AsignacionCrear, servicio: ServicioDep
-):
-    try:
-        return servicio.asignar(equipo_id, datos.usuario)
-    except EquipoNoEncontradoError:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Equipo no encontrado",
-        )
-    except EquipoNoDisponibleError:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="El equipo no está disponible para asignación",
-        )
+def asignar_equipo(equipo_id: int, datos: AsignacionCrear, servicio: ServicioDep):
+    return servicio.asignar(equipo_id, datos.usuario)
 
 @app.post("/equipos/{equipo_id}/baja", response_model=EquipoRespuesta)
 def dar_de_baja_equipo(equipo_id: int, servicio: ServicioDep):
-    try:
-        return servicio.dar_de_baja(equipo_id)
-    except EquipoNoEncontradoError:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Equipo no encontrado",
-        )
-    except EquipoYaDeBajaError:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="El equipo ya fue dado de baja",
-        )
+    return servicio.dar_de_baja(equipo_id)
 
 @app.get("/salud")
 def salud():
@@ -141,25 +136,8 @@ def salud():
 
 @app.post("/equipos/{equipo_id}/devolver", response_model=EquipoRespuesta)
 def devolver_equipo(equipo_id: int, servicio: ServicioDep):
-    try:
-        return servicio.devolver(equipo_id)
-    except EquipoNoEncontradoError:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Equipo no encontrado",
-        )
-    except EquipoNoAsignadoError:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="El equipo no está asignado",
-        )
+    return servicio.devolver(equipo_id)
 
 @app.get("/equipos/{equipo_id}/historial", response_model=list[EventoRespuesta])
 def historial_equipo(equipo_id: int, servicio: ServicioDep):
-    try:
-        return servicio.historial(equipo_id)
-    except EquipoNoEncontradoError:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Equipo no encontrado",
-        )
+    return servicio.historial(equipo_id)

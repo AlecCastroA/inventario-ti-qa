@@ -26,7 +26,13 @@ class Equipo:
     estado: EstadoEquipo = EstadoEquipo.DISPONIBLE
     asignado_a: str | None = None
 
+class AccionHistorial(str, Enum):
+    REGISTRO = "registro"
+    ASIGNACION = "asignacion"
+    DEVOLUCION = "devolucion"
+    BAJA = "baja"
+
 @dataclass
 class EventoHistorial:
-    accion: str
+    accion: AccionHistorial
     usuario: str | None = None
