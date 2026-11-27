@@ -52,7 +52,7 @@ _ERRORES_HTTP = {
     ),
 }
 
-async def _responder_error_de_negocio(request: Request, exc: Exception):
+async def _responder_error_de_negocio(_request: Request, exc: Exception):
     codigo, detalle = _ERRORES_HTTP[type(exc)]
     return JSONResponse(status_code=codigo, content={"detail": detalle})
 
